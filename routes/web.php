@@ -9,6 +9,9 @@ Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
         Route::view('dashboard', 'dashboard')->name('dashboard');
+
+        // Member Management
+        Route::view('members', 'members')->name('members');
     });
 
 require __DIR__.'/settings.php';
