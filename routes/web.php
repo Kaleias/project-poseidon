@@ -10,7 +10,8 @@ Route::prefix('{current_team}')
     ->group(function () {
         Route::view('dashboard', 'dashboard')->name('dashboard');
 
-        // Member Management
+        // Member Management - Protected by Policy
+        // Note: The Livewire component will also check via $this->authorize()
         Route::view('members', 'members')->name('members');
     });
 
