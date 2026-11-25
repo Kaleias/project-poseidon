@@ -13,6 +13,9 @@ Route::prefix('{current_team}')
         // Member Management - Protected by Policy
         // Note: The Livewire component will also check via $this->authorize()
         Route::view('members', 'members')->name('members');
+
+        // Book Management
+        Route::get('books', \App\Livewire\Books\BookManagement::class)->name('books');
     });
 
 require __DIR__.'/settings.php';

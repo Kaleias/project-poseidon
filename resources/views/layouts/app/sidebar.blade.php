@@ -34,6 +34,15 @@
                         {{ __('Member Management') }}
                     </flux:sidebar.item>
 
+                    <!-- Book Management -->
+                    <flux:sidebar.item
+                        icon="book-open"
+                        :href="route('books', ['current_team' => request()->route('current_team')])"
+                        :current="request()->routeIs('books')"
+                        wire:navigate>
+                        {{ __('Book Management') }}
+                    </flux:sidebar.item>
+
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
