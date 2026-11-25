@@ -16,6 +16,9 @@ Route::prefix('{current_team}')
 
         // Book Management
         Route::get('books', \App\Livewire\Books\BookManagement::class)->name('books');
+
+        // Category Management - Protected by CategoryPolicy
+        Route::view('categories', 'categories')->name('categories');
     });
 
 require __DIR__.'/settings.php';

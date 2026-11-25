@@ -43,6 +43,15 @@
                         {{ __('Book Management') }}
                     </flux:sidebar.item>
 
+                    <!-- Category Management -->
+                    <flux:sidebar.item
+                        icon="tag"
+                        :href="route('categories', ['current_team' => request()->route('current_team')])"
+                        :current="request()->routeIs('categories')"
+                        wire:navigate>
+                        {{ __('Category Management') }}
+                    </flux:sidebar.item>
+
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

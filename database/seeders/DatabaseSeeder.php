@@ -15,16 +15,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create a sample user
+        // One demo account per role (password for all: "password")
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'role' => 'admin',
         ]);
 
-        // Create 10 sample library members
+        User::factory()->create([
+            'name' => 'Lina Librarian',
+            'email' => 'librarian@example.com',
+            'role' => 'librarian',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Sam Student',
+            'email' => 'student@example.com',
+            'role' => 'student',
+        ]);
+
         $this->call([
+            CategorySeeder::class,
             MemberSeeder::class,
+            BookSeeder::class,
         ]);
     }
 }
