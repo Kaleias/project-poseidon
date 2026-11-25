@@ -38,6 +38,7 @@ class EnsureTeamMembership
     {
         if ($minimumRole === null) {
             return;
+            
         }
 
         $role = $user->teamRole($team);
