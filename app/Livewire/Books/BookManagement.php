@@ -2,42 +2,92 @@
 
 namespace App\Livewire\Books;
 
+use App\Actions\BorrowBookAction;
 use App\Actions\CreateBookAction;
+use App\Actions\DeleteBookAction;
+use App\Actions\ReturnBookAction;
+use App\Actions\UpdateBookAction;
 use App\Http\Requests\StoreBookRequest;
+use App\Http\Requests\UpdateBookRequest;
 use App\Models\Book;
 use App\Models\Category;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Illuminate\Support\Facades\Validator;
-use App\Actions\UpdateBookAction;
+use Livewire\WithPagination;
 
+/**
+ * Book Management.
+ *
+ * A slim orchestrator: authorize with BookPolicy, validate with the Form Request
+ * rules, then hand the real work to an Action class.
+ */
 class BookManagement extends Component
 {
+    use WithPagination;
+
     public $search = '';
+
     public $showForm = false;
-    public $isEditMode = false;
+
+    /**
+     * #[Locked]: the browser cannot change this id in the Livewire payload,
+     * so a user cannot trick updateBook() into editing a different book.
+     */
+    #[Locked]
     public $editingBookId = null;
 
     public $title = '';
+
     public $author = '';
+
     public $isbn = '';
+
     public $category_id = '';
+
     public $publisher = '';
+
     public $publication_year = '';
+
     public $quantity = 0;
 
-    public function openForm()
+    public function mount(): void
     {
-        $this->resetValidation();
-        $this->isEditMode = false;
-        $this->editingBookId = null;
+        $this->authorize('viewAny', Book::class);
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function openForm(): void
+    {
+        $this->authorize('create', Book::class);
+
+        $this->resetForm();
         $this->showForm = true;
     }
 
-    public function editBook($id)
+    public function saveBook(CreateBookAction $action): void
     {
-        $this->resetValidation();
+        $this->authorize('create', Book::class);
 
+        $validated = $this->validate((new StoreBookRequest)->rules());
+
+        $action->execute($validated);
+
+        $this->closeForm();
+
+        session()->flash('success', 'Book added successfully!');
+    }
+
+    public function editBook($id): void
+    {
         $book = Book::findOrFail($id);
+
+        $this->authorize('update', $book);
+
+        $this->resetValidation();
 
         $this->editingBookId = $book->id;
         $this->title = $book->title;
@@ -48,86 +98,66 @@ class BookManagement extends Component
         $this->publication_year = $book->publication_year;
         $this->quantity = $book->quantity;
 
-        $this->isEditMode = true;
         $this->showForm = true;
     }
-    public function updateBook(UpdateBookAction $action)
+
+    public function updateBook(UpdateBookAction $action): void
     {
+        // Re-fetch and re-authorize: never trust state that came from the browser.
         $book = Book::findOrFail($this->editingBookId);
 
-        $data = [
-            'title' => $this->title,
-            'author' => $this->author,
-            'isbn' => $this->isbn,
-            'category_id' => $this->category_id,
-            'publisher' => $this->publisher,
-            'publication_year' => $this->publication_year,
-            'quantity' => $this->quantity,
-        ];
+        $this->authorize('update', $book);
 
-        $rules = (new StoreBookRequest())->rules();
-
-        $rules['isbn'] = 'required|string|max:255|unique:books,isbn,' . $book->id;
-
-        $validated = Validator::make($data, $rules)->validate();
-
-        $borrowedQuantity = $book->quantity - $book->available_quantity;
-
-        if ($validated['quantity'] < $borrowedQuantity) {
-            $this->addError(
-                'quantity',
-                'Quantity cannot be less than the number of borrowed books.'
-            );
-
-            return;
-        }
-
-        $validated['available_quantity'] = $validated['quantity'] - $borrowedQuantity;
+        $validated = $this->validate(UpdateBookRequest::rulesFor($book->id));
 
         $action->execute($book, $validated);
 
         $this->closeForm();
 
-        $this->isEditMode = false;
-        $this->editingBookId = null;
-
         session()->flash('success', 'Book updated successfully!');
     }
 
-    public function deleteBook($id)
+    public function deleteBook($id, DeleteBookAction $action): void
     {
         $book = Book::findOrFail($id);
 
-        $book->delete();
+        $this->authorize('delete', $book);
+
+        $action->execute($book);
 
         session()->flash('success', 'Book deleted successfully!');
     }
 
-    public function borrowBook($id)
+    public function borrowBook($id, BorrowBookAction $action): void
     {
         $book = Book::findOrFail($id);
 
-        if ($book->available_quantity > 0) {
-            $book->decrement('available_quantity');
+        $this->authorize('update', $book);
 
-            session()->flash('success', 'Book borrowed successfully!');
-        }
+        $action->execute($book);
+
+        session()->flash('success', 'Book borrowed successfully!');
     }
 
-    public function returnBook($id)
+    public function returnBook($id, ReturnBookAction $action): void
     {
         $book = Book::findOrFail($id);
 
-        if ($book->available_quantity < $book->quantity) {
-            $book->increment('available_quantity');
+        $this->authorize('update', $book);
 
-            session()->flash('success', 'Book returned successfully!');
-        }
+        $action->execute($book);
+
+        session()->flash('success', 'Book returned successfully!');
     }
 
-    public function closeForm()
+    public function closeForm(): void
     {
         $this->showForm = false;
+        $this->resetForm();
+    }
+
+    public function resetForm(): void
+    {
         $this->reset([
             'title',
             'author',
@@ -136,45 +166,27 @@ class BookManagement extends Component
             'publisher',
             'publication_year',
             'quantity',
+            'editingBookId',
         ]);
+
         $this->resetValidation();
-    }
-
-    public function saveBook(CreateBookAction $action)
-    {
-        $this->resetValidation();
-
-        $data = [
-            'title' => $this->title,
-            'author' => $this->author,
-            'isbn' => $this->isbn,
-            'category_id' => $this->category_id,
-            'publisher' => $this->publisher,
-            'publication_year' => $this->publication_year,
-            'quantity' => $this->quantity,
-        ];
-
-        $validated = Validator::make(
-            $data,
-            (new StoreBookRequest())->rules()
-        )->validate();
-
-        $validated['available_quantity'] = $validated['quantity'];
-
-        $action->execute($validated);
-
-        $this->closeForm();
-
-        session()->flash('success', 'Book added successfully!');
     }
 
     public function render()
     {
-        $books = Book::where('title', 'like', '%' . $this->search . '%')
-            ->orWhere('author', 'like', '%' . $this->search . '%')
-            ->orWhere('isbn', 'like', '%' . $this->search . '%')
+        $term = '%'.$this->search.'%';
+
+        $books = Book::query()
+            ->with('category')
+            ->when($this->search !== '', function ($query) use ($term) {
+                // One grouped WHERE so the ORs stay inside the search condition.
+                $query->where(fn ($q) => $q
+                    ->where('title', 'like', $term)
+                    ->orWhere('author', 'like', $term)
+                    ->orWhere('isbn', 'like', $term));
+            })
             ->latest()
-            ->get();
+            ->paginate(8);
 
         return view('livewire.books.book-management', [
             'books' => $books,

@@ -4,63 +4,40 @@ namespace App\Policies;
 
 use App\Models\Book;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class BookPolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
+    /** Roles that run the library desk and may change the catalogue. */
+    private function isStaff(User $user): bool
+    {
+        return in_array($user->role, ['admin', 'librarian'], true);
+    }
+
+    /** Everyone who is logged in can browse the catalogue (read-only for students). */
     public function viewAny(User $user): bool
     {
-        return false;
+        return in_array($user->role, ['admin', 'librarian', 'student'], true);
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, Book $book): bool
     {
-        return false;
+        return $this->viewAny($user);
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
     public function create(User $user): bool
     {
-        return false;
+        return $this->isStaff($user);
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
+    /** Also covers the borrow / return stock buttons. */
     public function update(User $user, Book $book): bool
     {
-        return false;
+        return $this->isStaff($user);
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
+    /** Removing a book from the catalogue is admin-only. */
     public function delete(User $user, Book $book): bool
     {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Book $book): bool
-    {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Book $book): bool
-    {
-        return false;
+        return $user->role === 'admin';
     }
 }

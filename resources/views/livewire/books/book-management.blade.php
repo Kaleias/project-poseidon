@@ -1,191 +1,227 @@
-<div class="space-y-6">
+{{--
+    Book Management view.
+    - Built with Flux components
+    - Alpine.js drives the delete confirmation (x-data / x-show / x-on:click / x-text)
+    - All dynamic output uses {{ }} (escaped) or x-text. There is no {!! !!}.
+--}}
+<div
+    class="space-y-6"
+    x-data="{
+        confirmOpen: false,
+        confirmId: null,
+        confirmMessage: '',
+        ask(id, message) {
+            this.confirmId = id;
+            this.confirmMessage = message;
+            this.confirmOpen = true;
+        },
+        proceed() {
+            $wire.deleteBook(this.confirmId);
+            this.confirmOpen = false;
+        },
+    }"
+    x-on:keydown.escape.window="confirmOpen = false"
+>
 
-    {{-- Page Header --}}
+    {{-- Page header --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">
-                Book Management
-            </h1>
-            <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Manage the books available in the library.
-            </p>
+            <flux:heading size="xl" level="1">{{ __('Book Management') }}</flux:heading>
+            <flux:text class="mt-1">{{ __('Manage the books available in the library.') }}</flux:text>
         </div>
 
-        <button
-            wire:click="openForm"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-            + Add Book
-        </button>
+        @can('create', \App\Models\Book::class)
+            <flux:button variant="primary" icon="plus" wire:click="openForm">
+                {{ __('Add Book') }}
+            </flux:button>
+        @endcan
     </div>
 
-    {{-- Success Message --}}
+    {{-- Flash message --}}
     @if (session()->has('success'))
-        <div class="rounded-lg bg-green-100 p-3 text-green-700">
-            {{ session('success') }}
-        </div>
+        <flux:callout variant="success" icon="check-circle" :heading="session('success')" />
     @endif
 
-    {{-- Add Book Form --}}
-    @if ($showForm)
-        <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-
-            <h2 class="mb-5 text-lg font-semibold text-zinc-900 dark:text-white">
-                {{ $isEditMode ? 'Edit Book' : 'Add New Book' }}
-            </h2>
-
-            <form wire:submit="{{ $isEditMode ? 'updateBook' : 'saveBook' }}" class="space-y-4">
-
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Book Title</label>
-                    <input type="text" wire:model.live="title"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
-                    @error('title') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Author</label>
-                    <input type="text" wire:model="author"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
-                    @error('author') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="mb-1 block text-sm font-medium">ISBN</label>
-                    <input type="text" wire:model="isbn"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
-                    @error('isbn') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Category</label>
-                    <select wire:model.live="category_id"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
-                        <option value="">Select Category</option>
-                        @foreach ($categories as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('category_id') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Publisher (Optional)</label>
-                    <input type="text" wire:model="publisher"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
-                    @error('publisher') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Publication Year (Optional)</label>
-                    <input type="number" wire:model="publication_year"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
-                    @error('publication_year') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Quantity</label>
-                    <input type="number" min="0" wire:model.live="quantity"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
-                    @error('quantity') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                </div>
-
-                <div class="flex justify-end gap-3 pt-3">
-                    <button type="button" wire:click="closeForm"
-                        class="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600 dark:text-white">
-                        Cancel
-                    </button>
-
-                    <button type="submit"
-                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-                        {{ $isEditMode ? 'Update Book' : 'Save Book' }}
-                    </button>
-                </div>
-
-            </form>
-        </div>
+    {{-- Business-rule errors not tied to a form field (e.g. "no copies available") --}}
+    @if (! $showForm)
+        @error('book')
+            <flux:callout variant="danger" icon="exclamation-triangle" :heading="$message" />
+        @enderror
     @endif
 
-    {{-- Search Bar --}}
-    <div>
-        <input
-            type="text"
-            wire:model.live="search"
-            placeholder="Search by title, author or ISBN..."
-            class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-    </div>
+    {{-- Search --}}
+    <flux:input
+        wire:model.live.debounce.300ms="search"
+        icon="magnifying-glass"
+        placeholder="{{ __('Search by title, author or ISBN...') }}"
+    />
 
-    {{-- Book Table --}}
-    <div class="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
-        <table class="w-full text-left text-sm">
-            <thead class="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                <tr>
-                    <th class="px-4 py-3">Book ID</th>
-                    <th class="px-4 py-3">Title</th>
-                    <th class="px-4 py-3">Author</th>
-                    <th class="px-4 py-3">ISBN</th>
-                    <th class="px-4 py-3">Category</th>
-                    <th class="px-4 py-3">Quantity</th>
-                    <th class="px-4 py-3">Available</th>
-                    <th class="px-4 py-3">Action</th>
-                    <th class="px-4 py-3">Borrow</th>
-                </tr>
-            </thead>
+    {{-- Book table --}}
+    <flux:table :paginate="$books">
+        <flux:table.columns>
+            <flux:table.column>{{ __('Title') }}</flux:table.column>
+            <flux:table.column>{{ __('ISBN') }}</flux:table.column>
+            <flux:table.column>{{ __('Category') }}</flux:table.column>
+            <flux:table.column>{{ __('Available') }}</flux:table.column>
+            @can('create', \App\Models\Book::class)
+                <flux:table.column>{{ __('Stock') }}</flux:table.column>
+                <flux:table.column>{{ __('Actions') }}</flux:table.column>
+            @endcan
+        </flux:table.columns>
 
-            <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
-                @forelse ($books as $book)
-                    <tr class="text-zinc-700 dark:text-zinc-300">
-                        <td class="px-4 py-3">{{ $book->id }}</td>
-                        <td class="px-4 py-3 font-medium">{{ $book->title }}</td>
-                        <td class="px-4 py-3">{{ $book->author }}</td>
-                        <td class="px-4 py-3">{{ $book->isbn }}</td>
-                        <td class="px-4 py-3">{{ $book->category?->name ?? 'Uncategorized' }}</td>
-                        <td class="px-4 py-3">{{ $book->quantity }}</td>
-                        <td class="px-4 py-3">{{ $book->available_quantity }}</td>
-                        <td class="px-4 py-3">
-                            <button wire:click="editBook({{ $book->id }})"
-                                class="px-3 py-1 bg-blue-600 text-white rounded">
-                                Edit
-                            </button>
+        <flux:table.rows>
+            @forelse ($books as $book)
+                @php
+                    $deleteMessage = 'Permanently delete "'.$book->title.'"? This cannot be undone.';
+                @endphp
 
-                            <button wire:click="deleteBook({{ $book->id }})"
-                                wire:confirm="Are you sure you want to delete this book?"
-                                class="px-3 py-1 bg-red-600 text-white rounded">
-                                Delete
-                            </button>
-                        </td>
-                        <td class="px-4 py-3">
+                <flux:table.row :key="$book->id">
+                    <flux:table.cell>
+                        <div class="font-medium">{{ $book->title }}</div>
+                        <div class="text-xs text-zinc-500">{{ $book->author }}</div>
+                    </flux:table.cell>
+
+                    <flux:table.cell>{{ $book->isbn }}</flux:table.cell>
+
+                    <flux:table.cell>
+                        <flux:badge size="sm">{{ $book->category?->name ?? __('Uncategorized') }}</flux:badge>
+                    </flux:table.cell>
+
+                    <flux:table.cell>
+                        <flux:badge size="sm" :color="$book->available_quantity > 0 ? 'green' : 'red'">
+                            {{ $book->available_quantity }} / {{ $book->quantity }}
+                        </flux:badge>
+                    </flux:table.cell>
+
+                    @can('update', $book)
+                        <flux:table.cell>
                             <div class="flex items-center gap-2">
-
-                                <button
+                                <flux:button
+                                    size="xs"
                                     wire:click="returnBook({{ $book->id }})"
-                                    @disabled($book->available_quantity >= $book->quantity)
-                                    class="px-3 py-1 bg-gray-500 text-white rounded disabled:opacity-40">
-                                    -
-                                </button>
+                                    :disabled="$book->available_quantity >= $book->quantity"
+                                >
+                                    {{ __('Return') }}
+                                </flux:button>
 
-                                <span class="font-semibold">
-                                    {{ $book->quantity - $book->available_quantity }}
+                                <span class="text-sm font-semibold">
+                                    {{ $book->quantity - $book->available_quantity }} {{ __('out') }}
                                 </span>
 
-                                <button
+                                <flux:button
+                                    size="xs"
                                     wire:click="borrowBook({{ $book->id }})"
-                                    @disabled($book->available_quantity <= 0)
-                                    class="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-40">
-                                    +
-                                </button>
-
+                                    :disabled="$book->available_quantity <= 0"
+                                >
+                                    {{ __('Borrow') }}
+                                </flux:button>
                             </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="9" class="px-4 py-8 text-center text-zinc-500">
-                            No books found.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                        </flux:table.cell>
+
+                        <flux:table.cell>
+                            {{-- Buttons are hidden when the policy denies them; the server re-checks anyway. --}}
+                            <div class="flex gap-2">
+                                <flux:button size="sm" wire:click="editBook({{ $book->id }})">
+                                    {{ __('Edit') }}
+                                </flux:button>
+
+                                @can('delete', $book)
+                                    <flux:button
+                                        size="sm"
+                                        variant="danger"
+                                        type="button"
+                                        x-on:click="ask({{ $book->id }}, @js($deleteMessage))"
+                                    >
+                                        {{ __('Delete') }}
+                                    </flux:button>
+                                @endcan
+                            </div>
+                        </flux:table.cell>
+                    @endcan
+                </flux:table.row>
+            @empty
+                <flux:table.row>
+                    <flux:table.cell colspan="6" class="py-8 text-center text-zinc-500">
+                        {{ __('No books found.') }}
+                    </flux:table.cell>
+                </flux:table.row>
+            @endforelse
+        </flux:table.rows>
+    </flux:table>
+
+    {{-- Add / edit modal (Flux). Staff only. --}}
+    @can('create', \App\Models\Book::class)
+        <flux:modal wire:model.self="showForm" class="w-full md:w-[34rem]">
+            <form wire:submit="{{ $editingBookId ? 'updateBook' : 'saveBook' }}" class="space-y-5">
+                <flux:heading size="lg">
+                    {{ $editingBookId ? __('Edit Book') : __('Add New Book') }}
+                </flux:heading>
+
+                @error('book')
+                    <flux:callout variant="danger" icon="exclamation-triangle" :heading="$message" />
+                @enderror
+
+                <flux:input wire:model="title" label="{{ __('Book Title') }}" />
+
+                <flux:input wire:model="author" label="{{ __('Author') }}" />
+
+                <flux:input wire:model="isbn" label="{{ __('ISBN') }}" />
+
+                <flux:select wire:model="category_id" label="{{ __('Category') }}" placeholder="{{ __('Select Category') }}">
+                    @foreach ($categories as $category)
+                        <flux:select.option value="{{ $category->id }}">{{ $category->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                <flux:input wire:model="publisher" label="{{ __('Publisher (Optional)') }}" />
+
+                <flux:input type="number" wire:model="publication_year" label="{{ __('Publication Year (Optional)') }}" />
+
+                <flux:input type="number" min="0" wire:model="quantity" label="{{ __('Quantity') }}" />
+
+                <div class="flex justify-end gap-2">
+                    <flux:button type="button" wire:click="closeForm">{{ __('Cancel') }}</flux:button>
+                    <flux:button type="submit" variant="primary">
+                        {{ $editingBookId ? __('Update Book') : __('Save Book') }}
+                    </flux:button>
+                </div>
+            </form>
+        </flux:modal>
+    @endcan
+
+    {{-- Alpine.js delete confirmation.
+         x-text (NOT x-html) shows the book title as plain text, so injected HTML never runs. --}}
+    <div
+        x-show="confirmOpen"
+        x-transition.opacity
+        style="display: none;"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    >
+        <div
+            x-on:click.outside="confirmOpen = false"
+            class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-800"
+        >
+            <h3 class="text-lg font-semibold text-zinc-900 dark:text-white">{{ __('Please confirm') }}</h3>
+            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300" x-text="confirmMessage"></p>
+
+            <div class="mt-6 flex justify-end gap-2">
+                <button
+                    type="button"
+                    x-on:click="confirmOpen = false"
+                    class="rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600 dark:text-white"
+                >
+                    {{ __('Cancel') }}
+                </button>
+
+                <button
+                    type="button"
+                    x-on:click="proceed()"
+                    class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                    {{ __('Confirm') }}
+                </button>
+            </div>
+        </div>
     </div>
 
 </div>

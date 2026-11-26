@@ -30,7 +30,7 @@ class BookFactory extends Factory
         ];
     }
 
-    /** A book with every copy currently borrowed. */
+    /** A book with every copy currently on loan. */
     public function unavailable(): static
     {
         return $this->state(fn (array $attributes) => [
