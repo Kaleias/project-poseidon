@@ -1,23 +1,28 @@
 <?php
 
 use App\Http\Middleware\EnsureTeamMembership;
+use App\Livewire\Books\BookManagement;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', function () {
 
+    $slug = auth()->user()->currentTeam?->slug ?? auth()->user()->teams()->first()?->slug;
+    
+
+    if (!$slug) {
+        return redirect()->route('dashboard', ['current_team' => 'default']);
+    }
+
+    return redirect()->route('dashboard', ['current_team' => $slug]);
+})->middleware('auth')->name('home');
+
+// 2. Keep the rest of the routes as they are
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
         Route::view('dashboard', 'dashboard')->name('dashboard');
-
-        // Member Management - Protected by Policy
-        // Note: The Livewire component will also check via $this->authorize()
         Route::view('members', 'members')->name('members');
-
-        // Book Management
-        Route::get('books', \App\Livewire\Books\BookManagement::class)->name('books');
-
-        // Category Management - Protected by CategoryPolicy
+        Route::get('books', BookManagement::class)->name('books');
         Route::view('categories', 'categories')->name('categories');
     });
 

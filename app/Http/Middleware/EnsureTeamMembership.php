@@ -60,7 +60,11 @@ class EnsureTeamMembership
         $team = $request->route('current_team') ?? $request->route('team');
 
         if (is_string($team)) {
-            $team = Team::where('slug', $team)->first();
+            // If the parameter is a number, search by ID. Otherwise, search by slug.
+            if (is_numeric($team)) {
+                return Team::find($team);
+            }
+            return Team::where('slug', $team)->first();
         }
 
         return $team;

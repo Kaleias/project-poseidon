@@ -21,25 +21,35 @@ class DemoUserSeeder extends Seeder
             ['Sam Student', 'student@example.com', 'student'],
         ];
 
-        foreach ($accounts as [$name, $email, $role]) {
+                foreach ($accounts as [$name, $email, $role]) {
             $user = User::where('email', $email)->first();
 
-            if ($user) {
-                // The 'hashed' cast on User hashes this plain password automatically.
+            if (! $user) {
+                $user = User::factory()->create([
+                    'name' => $name,
+                    'email' => $email,
+                    'role' => $role,
+                ]);
+            } else {
                 $user->forceFill([
                     'role' => $role,
                     'password' => 'password',
                     'email_verified_at' => now(),
                 ])->save();
-
-                continue;
             }
 
-            User::factory()->create([
-                'name' => $name,
-                'email' => $email,
-                'role' => $role,
-            ]);
+
+            if (! $user->current_team_id) {
+                $team = \App\Models\Team::factory()->create([
+                    'name' => $name . "'s Team",
+                    'owner_id' => $user->id, 
+                ]);
+                
+                $user->forceFill(['current_team_id' => $team->id])->save();
+                
+
+                $user->teams()->attach($team); 
+            }
         }
     }
 }
